@@ -45,7 +45,7 @@ with open("auth_logs.json", "r") as file:
             event = entry["event"]
             user = entry["user"]
             ip = entry["ip"]
-        except KeyError:
+        except Exception as e:
             print(f"  [SKIP] Invalid log entry: {entry}")
             continue
 
