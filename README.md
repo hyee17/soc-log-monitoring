@@ -113,7 +113,7 @@ Blocked IP attempts are ignored or denied.
 
 ---
 
-### 📁 4. Successful Login Handling
+### ✅ 4. Successful Login Handling
 
 Successful login or normal activity processed without security issues.
 
@@ -145,7 +145,7 @@ Unrecognized or unexpected event types detected in the log stream.
 
 ---
 
-### 📁 4. Alert Log File (`alerts.txt`)
+### 📁 7. Alert Log File (`alerts.txt`)
 
 Persistent storage of detected incidents.
 
