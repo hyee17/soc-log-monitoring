@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -17,23 +18,36 @@ def is_blocked(ip, current_time):
         return False
     return True
 
-print("=== Auth Log Monitor ===\n")
+def get_severity(attempts):
+    if attempts == THRESHOLD:
+        return "HIGH"
+    elif attempts == THRESHOLD - 1:
+        return "MEDIUM"
+    else:
+        return "LOW"
 
-with open("auth_logs.txt", "r") as file:
-    for line in file:
-        parts = line.strip().split()
+print("=== JSON Auth Log Monitor ===\n")
 
-        # need at least 5 fields (timestamp x2, event, user, ip) — skip garbage lines
-        if len(parts) < 5:
-            print(f"  [SKIP]    {line.strip()}")
+with open("auth_logs.json", "r") as file:
+    logs = json.load(file)
+
+    for entry in logs:
+
+    	required_fields = ["timestamp", "event", "user", "ip"]
+
+    	if not all(field in entry for field in required_fields):
+           print(f"  [SKIP] Invalid log entry: {entry}")
+           continue
+
+        try:
+            timestamp = entry["timestamp"]
+            current_time = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+            event = entry["event"]
+            user = entry["user"]
+            ip = entry["ip"]
+        except KeyError:
+            print(f"  [SKIP] Invalid log entry: {entry}")
             continue
-
-        # pull out each field by position
-        timestamp = parts[0] + " " + parts[1]
-        current_time = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
-        event = parts[2]
-        user = parts[3]
-        ip = parts[4]
 
         if event == "LOGIN_FAILED":
             # only ignore failed attempts from blocked IPs
@@ -43,22 +57,25 @@ with open("auth_logs.txt", "r") as file:
                 continue
 
             failed_attempts[ip] += 1
-            remaining = THRESHOLD - failed_attempts[ip]
+            severity = get_severity(failed_attempts[ip])
 
             # show a warning as they get closer to the threshold
-            if remaining > 0:
-                print(f"  [WARN]    {ip} ({user}) — failed attempt {failed_attempts[ip]}/{THRESHOLD}")
+            if failed_attempts[ip] < THRESHOLD:
+                print(f"  [{severity}] {ip} ({user}) — failed attempt {failed_attempts[ip]}/{THRESHOLD}")
             else:
                 unblock_time = current_time + timedelta(minutes=BLOCK_DURATION_MINUTES)
                 blocked_ips[ip] = unblock_time
                 alert_count += 1
 
-                print(f"  [ALERT]   {ip} ({user}) — threshold reached! blocking for {BLOCK_DURATION_MINUTES} mins")
-                print(f"  [BLOCKED] {ip} — unblocks at {unblock_time.strftime('%H:%M:%S')}, logged to alerts.txt")
+                print(f"  [ALERT-{severity}] {ip} ({user}) — blocking for {BLOCK_DURATION_MINUTES} mins")
+                print(f"  [BLOCKED] {ip} — until {unblock_time.strftime('%H:%M:%S')}")
                 
                 # append to alerts file so we have a persistent record
                 with open("alerts.txt", "a") as f:
-                    f.write(f"[ALERT] {ip} | {user} | {THRESHOLD} attempts | {timestamp} | blocked until {unblock_time}\n")
+                    f.write(
+                        f"[{severity}] {ip} | {user} | {failed_attempts[ip]} attempts | "
+                        f"{timestamp} | blocked until {unblock_time}\n"
+                    )
 
         elif event == "LOGIN_SUCCESS":
             if is_blocked(ip, current_time):
@@ -69,7 +86,7 @@ with open("auth_logs.txt", "r") as file:
                 
             if failed_attempts[ip] > 0:
                 # had some failures before — note the reset
-                print(f"  [OK]      {ip} ({user}) — logged in, cleared {failed_attempts[ip]} failed attempt(s)")
+                print(f"  [OK]      {ip} ({user}) — cleared {failed_attempts[ip]} failed attempt(s)")
             else:
                 # clean login, no prior failures
                 print(f"  [OK]      {ip} ({user}) — logged in")
@@ -79,6 +96,6 @@ with open("auth_logs.txt", "r") as file:
 
         else:
             # log any unrecognised event types we haven't accounted for
-            print(f"  [UNKNOWN] {ip} ({user}) — unrecognised event '{event}' at {timestamp}")
+            print(f"  [UNKNOWN] {ip} ({user}) — unrecognised event '{event}'")
 
 print(f"\n=== Done: {alert_count} alert(s), {len(blocked_ips)} IP(s) still blocked ===")
