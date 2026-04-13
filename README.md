@@ -107,8 +107,40 @@ System detects threshold breach and triggers HIGH severity alert.
 Blocked IP attempts are ignored or denied.
 
 ```
+[DENIED]  192.168.1.10 (user1) — still blocked until 10:30:08
 [IGNORED] 192.168.1.10 (user1) — blocked until 10:30:08
-[DENIED] 192.168.1.10 (user1) — still blocked
+```
+
+---
+
+### 📁 4. Successful Login Handling
+
+Successful login or normal activity processed without security issues.
+
+```
+[OK]      192.168.1.30 (bob) — cleared 2 failed attempt(s)
+[OK]      192.168.1.40 (alice) — logged in 
+```
+
+---
+
+### ⚠️ 5. Data Validation
+
+Invalid or malformed log entries that are safely ignored by the system.
+
+```
+[SKIP] Invalid log entry: {'timestamp': '2026-04-10 14:00:00', 'event': 'LOGIN_FAILED'}
+[SKIP] Invalid log entry: {'timestamp': '2026-04-10 14:00:01', 'event': 'BADLINE', 'raw': 'only four'} 
+```
+
+---
+
+### ❓ 6. Unknown Event Handling
+
+Unrecognized or unexpected event types detected in the log stream.
+
+```
+[UNKNOWN] 192.168.1.50 (root) — unrecognised event 'LOGOUT'
 ```
 
 ---
@@ -119,6 +151,8 @@ Persistent storage of detected incidents.
 
 ```
 [HIGH] 192.168.1.10 | user1 | 3 attempts | 2026-04-10 10:00:08 | blocked until 2026-04-10 10:30:08
+[HIGH] 192.168.1.20 | admin | 3 attempts | 2026-04-10 11:00:06 | blocked until 2026-04-10 11:30:06
+[HIGH] 192.168.1.50 | root | 3 attempts | 2026-04-10 14:01:06 | blocked until 2026-04-10 14:31:06
 ```
 
 ---
