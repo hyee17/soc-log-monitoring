@@ -22,12 +22,12 @@ with open("auth_logs.txt", "r") as file:
         user = parts[3]
         ip = parts[4]
 
-        # nothing more to do for already-blocked IPs
-        if ip in blocked_ips:
-            print(f"  [BLOCKED] Ignored activity from {ip} (user: {user}) at {timestamp}")
-            continue
-
         if event == "LOGIN_FAILED":
+            # only ignore failed attempts from blocked IPs
+            if ip in blocked_ips:
+                print(f"  [IGNORED] {ip} ({user}) — already blocked")
+                continue
+
             failed_attempts[ip] += 1
             remaining = THRESHOLD - failed_attempts[ip]
 
@@ -53,7 +53,12 @@ with open("auth_logs.txt", "r") as file:
             else:
                 # clean login, no prior failures
                 print(f"  [OK]      {ip} ({user}) — logged in")
-            
+
+            # successful login lifts the block and resets the counter
+            if ip in blocked_ips:
+                blocked_ips.discard(ip)
+                print(f"  [UNBLOCK] {ip} ({user}) — block lifted after successful login")
+
             # successful login means it's probably a real user — give them a clean slate
             failed_attempts[ip] = 0
 
